@@ -8,10 +8,74 @@ output: html_document
 Loading needed packages
 ```{r, message = FALSE}
 library(R.matlab)
+library(ggplot2)
 ```
 
 
-Reading the data
+
+
+There are 5 shape metrics used: elastic scaled metric, elastic unscaled metric with elastic representation of shapes,  Full Procrustes metric, Kendall scaled metric, Kendall unscaled metric with Kendall's representation of shapes. 
+
+Data in nested sturcture: factor-cell, animal, type of mitochondria (SS/IMF), exercise(Running/Sedentary)
+
+
+### Reading `Allshape.mat`
+
+`Allshape.mat` contains a large 3D array containing mitochondrial shape data for multiple animals and cells.
+
+AllShape.mat contains all the reampled boundary, to make the code run faster we resample 50 points on the boundary.
+%%%Data: 12 animal in total.X1,X2,...,X12 
+%%%Each animal contain several cells: 4, 5 or 6.
+%%%n1,n2,...,n12 = number of mitochondria shapes in each cell of each animal
+
+```{r}
+# Set the file path
+Allshape <- "data/Allshape.mat"
+
+# Read the .mat file
+Allshape <- readMat(Allshape)
+```
+
+Try to visualize the mitochondrial shapes.
+```{r}
+# Extract mitochondria data for animal X1
+mitochondria <- Allshape$X1
+
+# Get the number of shapes for X1
+num_shapes <- dim(mitochondria)[3]
+
+# Set up a single plot layout for separate plots
+par(mfrow = c(ceiling(sqrt(num_shapes)), ceiling(sqrt(num_shapes)))) # Square grid layout
+
+
+# Set the number of plots per page (e.g., 16 plots per page)
+plots_per_page <- 16
+pages <- ceiling(num_shapes / plots_per_page)
+
+for (page in 1:pages) {
+  # Define the range of shapes to plot on this page
+  start <- (page - 1) * plots_per_page + 1
+  end <- min(page * plots_per_page, num_shapes)
+  
+  # Adjust layout for the current batch
+  par(mfrow = c(4, 4), mar = c(2, 2, 2, 2)) # 4x4 grid with smaller margins
+  
+  # Plot each shape in the current batch
+  for (i in start:end) {
+    x_coords <- mitochondria[1, , i]
+    y_coords <- mitochondria[2, , i]
+    
+    plot(x_coords, y_coords, type = "l", col = "blue",
+         xlab = "", ylab = "", main = paste("Shape", i), asp = 1)
+  }
+  
+  # Pause to view each page
+  readline(prompt = "Press [Enter] to view the next page...")
+}
+```
+
+
+Reading data.mat (same as Allshape.mat?)
 ```{r}
 # Set the file path
 data <- "data/data.mat"
@@ -23,3 +87,93 @@ data <- readMat(data)
 str(data)
 ```
 
+
+### Reading classA.mat
+
+Not sure what this is for - not included in the readme.txt file.
+```{r}
+
+# Set the file path
+classA <- "data/classA.mat"
+
+# Read the .mat file
+classA <- readMat(classA)
+```
+
+### Reading A.mat
+
+Not sure what this is for - not included in the readme.txt file.
+```{r}
+
+# Set the file path
+A <- "data/A.mat"
+
+# Read the .mat file
+A <- readMat(A)
+```
+
+### Reading P_Elastic_scaled_cell.mat
+
+```{r}
+
+# Set the file path
+P_Elastic_scaled_cell <- "data/P_Elastic_scaled_cell.mat"
+
+# Read the .mat file
+P_Elastic_scaled_cell <- readMat(P_Elastic_scaled_cell)
+```
+
+### Reading ScaledElasticDisMat.mat
+
+ElasticDisMat.m
+
+used to get the distance matrix between two groups/samples of shapes. 
+
+To improve effciency, I use parallel computing with "parfor", it's just "for" looping.
+
+```{r}
+# Set the file path
+ScaledElasticDisMat <- "data/ScaledElasticDisMat.mat"
+
+# Read the .mat file
+ScaledElasticDisMat <- readMat(ScaledElasticDisMat)
+```
+
+
+
+ReSampleCurve.m
+Resample the original data to get N points on the boundary
+
+plot_color_map.m
+to display the distance matrix between two samples/groups
+
+Ex: folder--ElasticShapeScaled
+
+
+ElasticDistance.m
+used to calculate the elastic scaled metric between two shapes/boundaries. 
+
+
+EnergyStat2sample.m
+used the calculate the energy statistic of two groups/samples
+
+EnergyStatksample.m
+used the calculate the energy statistic of k groups/samples
+
+PermutationTest.m
+use permutation test to get the p-value of energy test with energy statistic
+
+TestStatistic.m
+to test the significance of one factor when it contains another significant factor. 
+For example, to test the the significance of animal when it contains another significant factor--cell.
+I designed two test statistic: delta and epsilon but we think epsilon is better. 
+
+TwoAnimalPermutation.m
+use permutation test to get the p-value of of TestStatistic.m. Here, it's only for two-sample test 
+because of the mitochondria data. If you have k-sample, you can design k-sample test statistic like 
+energy statistic.
+
+
+GetDistanceMat.m
+to get the distance matrix. It takes a long time with elastic metrics and also large memory of the computer.
+You may want to get it step by step.
