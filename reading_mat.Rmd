@@ -1,0 +1,25 @@
+---
+title: "reading_mat"
+author: "Xiaoni Xu"
+date: "2024-11-18"
+output: html_document
+---
+
+Loading needed packages
+```{r, message = FALSE}
+library(R.matlab)
+```
+
+
+Reading the data
+```{r}
+# Set the file path
+data <- "data/data.mat"
+
+# Read the .mat file
+data <- readMat(data)
+
+# Explore the structure of the loaded data
+str(data)
+```
+
