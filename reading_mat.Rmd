@@ -9,6 +9,8 @@ Loading needed packages
 ```{r, message = FALSE}
 library(R.matlab)
 library(ggplot2)
+library(MHD)
+library(manifold)
 ```
 
 
@@ -140,6 +142,7 @@ ScaledElasticDisMat <- readMat(ScaledElasticDisMat)
 ```
 
 
+### .mat files not used
 
 ReSampleCurve.m
 Resample the original data to get N points on the boundary
@@ -177,3 +180,99 @@ energy statistic.
 GetDistanceMat.m
 to get the distance matrix. It takes a long time with elastic metrics and also large memory of the computer.
 You may want to get it step by step.
+
+
+## Fitting Metric Halfspace Depth package
+
+Reshape Data for All Animals
+
+```{r}
+# Initialize a list to store reshaped data for all animals
+reshaped_data_all <- list()
+
+# Loop through the animals (X1 to X12)
+for (animal in names(Allshape)[1:12]) {  
+  mitochondria <- Allshape[[animal]]
+  reshaped_data_all[[animal]] <- t(apply(mitochondria, 3, function(mat) c(mat[1, ], mat[2, ])))
+}
+
+# Check the structure of the reshaped data for all animals
+str(reshaped_data_all)
+```
+
+
+Compute Metric Halfspace Depth
+```{r}
+# Initialize a list to store MHD results for all animals
+mhd_results_all <- list()
+
+# Create Euclidean manifold
+euclidean_mfd <- createM("Euclidean")
+
+# Loop through all animals
+for (animal in names(reshaped_data_all)) {
+  # Get reshaped data for the current animal
+  data <- reshaped_data_all[[animal]]
+  
+  # Ensure data and anchors are matrices
+  data_matrix <- as.matrix(data)
+  
+  # Apply MHD function
+  mhd_results_all[[animal]] <- MHD(
+    mfd = euclidean_mfd,   # Manifold: Euclidean space
+    data = data_matrix,    # Data points as matrix
+    anchors = data_matrix, # Use data points themselves as anchors
+    depthOnly = TRUE       # Only calculate depth values
+  )
+}
+
+
+# Check results for one animal (e.g., X1)
+mhd_results_all$X1
+```
+Higher depth values indicate shapes that are more typical of the dataset.
+
+Plot the depth values
+```{r}
+# Extract reshaped data for X1
+x1_data <- reshaped_data_all$X1
+
+# Extract depth values for X1
+depthSamp <- mhd_results_all$X1$depthSamp
+
+# Add depth values as a new column to the reshaped data
+x1_data_with_depth <- cbind(x1_data, Depth = depthSamp)
+
+# Display the first few rows to confirm mapping
+head(x1_data_with_depth)
+```
+
+
+```{r}
+# Loop through each mitochondria shape in X1
+num_shapes <- nrow(x1_data_with_depth)
+par(mfrow = c(5, 5)) # Arrange plots in a grid
+
+# Save the plots to a PDF
+pdf("X1_mitochondria_depth_plots.pdf", width = 10, height = 10)
+
+# Adjust layout and margins
+par(mfrow = c(5, 5), mar = c(1, 1, 2, 1))
+
+# Map depth to each mitochondria shape for X1
+depth_values <- mhd_results_all$X1$depthSamp
+
+for (i in 1:nrow(reshaped_data_all$X1)) {
+  x_coords <- reshaped_data_all$X1[i, 1:(ncol(reshaped_data_all$X1) / 2)]
+  y_coords <- reshaped_data_all$X1[i, ((ncol(reshaped_data_all$X1) / 2) + 1):ncol(reshaped_data_all$X1)]
+  
+  plot(
+    x_coords, y_coords, type = "l",
+    main = paste("Depth:", round(depth_values[i], 3)),
+    xlab = "", ylab = "", axes = FALSE
+  )
+}
+
+dev.off()
+```
+
